@@ -1,0 +1,484 @@
+using System;
+using Unity.VisualScripting;
+using UnityEngine;
+using Valve.VR.InteractionSystem;
+
+[System.Serializable]
+public struct CircularDriveObjects
+{
+    public GameObject up;
+    public GameObject down;
+    public GameObject front;
+    public GameObject back;
+    public GameObject right;
+    public GameObject left;
+};
+
+[System.Serializable]
+public struct CircularDrives
+{
+    public CircularDrive up;
+    public CircularDrive down;
+    public CircularDrive front;
+    public CircularDrive back;
+    public CircularDrive right;
+    public CircularDrive left;
+};
+
+[System.Serializable]
+public struct Cubes
+{
+    public Transform U;
+    public Transform D;
+    public Transform F;
+    public Transform B;
+    public Transform R;
+    public Transform L;
+
+    public Transform UF;
+    public Transform UB;
+    public Transform UR;
+    public Transform UL;
+    public Transform UFR;
+    public Transform UFL;
+    public Transform UBR;
+    public Transform UBL;
+
+    public Transform DF;
+    public Transform DB;
+    public Transform DR;
+    public Transform DL;
+    public Transform DFR;
+    public Transform DFL;
+    public Transform DBR;
+    public Transform DBL;
+
+    public Transform FR;
+    public Transform FL;
+    public Transform BR;
+    public Transform BL;
+
+    public Transform middle;
+};
+
+
+
+public class RubikTest2 : MonoBehaviour
+{
+    public CircularDriveObjects circularDriveObjects;
+    public CircularDrives circularDrives;
+    public Cubes cubes;
+
+    public float snapSpeed = 90.0f;
+    public float cubeOffset = 0.11f;
+    
+    // [x,y,z] -> [down-up, left-right, front-back]
+    Transform[,,] cubeArray = new Transform [3,3,3];
+    GameObject[] circularDriveObjectsArray = new GameObject [6];
+
+    enum UsedSide
+    {
+        Up = 0,
+        Down,
+        Front,
+        Back,
+        Right,
+        Left,
+        None
+    }
+
+    UsedSide usedSide = UsedSide.None;
+
+    bool isGrabbedAny = false;
+
+    float prevAngle = 0.0f;
+
+    bool snapRotation = false;
+
+    float angle = 0.0f;
+    float snapDirection = 0.0f;
+    float snapAngle = 0.0f;
+    float snapRotationOffset = 0.0f;
+
+    void Start()
+    {
+        cubeArray[0,0,0] = cubes.DFL;
+        cubeArray[0,0,1] = cubes.DL;
+        cubeArray[0,0,2] = cubes.DBL;
+
+        cubeArray[0,1,0] = cubes.DF;
+        cubeArray[0,1,1] = cubes.D;
+        cubeArray[0,1,2] = cubes.DB;
+
+        cubeArray[0,2,0] = cubes.DFR;
+        cubeArray[0,2,1] = cubes.DR;
+        cubeArray[0,2,2] = cubes.DBR;
+
+        
+        cubeArray[1,0,0] = cubes.FL;
+        cubeArray[1,0,1] = cubes.L;
+        cubeArray[1,0,2] = cubes.BL;
+
+        cubeArray[1,1,0] = cubes.F;
+        cubeArray[1,1,1] = cubes.middle;
+        cubeArray[1,1,2] = cubes.B;
+
+        cubeArray[1,2,0] = cubes.FR;
+        cubeArray[1,2,1] = cubes.R;
+        cubeArray[1,2,2] = cubes.BR;
+
+
+        cubeArray[2,0,0] = cubes.UFL;
+        cubeArray[2,0,1] = cubes.UL;
+        cubeArray[2,0,2] = cubes.UBL;
+
+        cubeArray[2,1,0] = cubes.UF;
+        cubeArray[2,1,1] = cubes.U;
+        cubeArray[2,1,2] = cubes.UB;
+
+        cubeArray[2,2,0] = cubes.UFR;
+        cubeArray[2,2,1] = cubes.UR;
+        cubeArray[2,2,2] = cubes.UBR;
+
+
+        circularDriveObjectsArray[(int)UsedSide.Up] = circularDriveObjects.up;
+        circularDriveObjectsArray[(int)UsedSide.Down] = circularDriveObjects.down;
+        circularDriveObjectsArray[(int)UsedSide.Front] = circularDriveObjects.front;
+        circularDriveObjectsArray[(int)UsedSide.Back] = circularDriveObjects.back;
+        circularDriveObjectsArray[(int)UsedSide.Right] = circularDriveObjects.right;
+        circularDriveObjectsArray[(int)UsedSide.Left] = circularDriveObjects.left;
+
+    }
+
+    void Update()
+    {
+        if(circularDrives.up.IsGrabbed() && (isGrabbedAny == false))
+        {
+            isGrabbedAny = true;
+            usedSide = UsedSide.Up;
+            prevAngle = circularDrives.up.GetOutAngle();
+
+            for(int i = 0; i < 6; i++)
+            {
+                if(i != (int)usedSide)
+                {
+                    circularDriveObjectsArray[i].SetActive(false);
+                }
+            }
+        }
+        else if(circularDrives.down.IsGrabbed() && (isGrabbedAny == false))
+        {
+            isGrabbedAny = true;
+            usedSide = UsedSide.Down;
+            prevAngle = circularDrives.down.GetOutAngle();
+
+            for(int i = 0; i < 6; i++)
+            {
+                if(i != (int)usedSide)
+                {
+                    circularDriveObjectsArray[i].SetActive(false);
+                }
+            }
+        }
+        else if(circularDrives.front.IsGrabbed() && (isGrabbedAny == false))
+        {
+            isGrabbedAny = true;
+            usedSide = UsedSide.Front;
+            prevAngle = circularDrives.front.GetOutAngle();
+
+            for(int i = 0; i < 6; i++)
+            {
+                if(i != (int)usedSide)
+                {
+                    circularDriveObjectsArray[i].SetActive(false);
+                }
+            }
+        }
+        else if(circularDrives.back.IsGrabbed() && (isGrabbedAny == false))
+        {
+            isGrabbedAny = true;
+            usedSide = UsedSide.Back;
+            prevAngle = circularDrives.back.GetOutAngle();
+
+            for(int i = 0; i < 6; i++)
+            {
+                if(i != (int)usedSide)
+                {
+                    circularDriveObjectsArray[i].SetActive(false);
+                }
+            }
+        }
+        else if(circularDrives.right.IsGrabbed() && (isGrabbedAny == false))
+        {
+            isGrabbedAny = true;
+            usedSide = UsedSide.Right;
+            prevAngle = circularDrives.right.GetOutAngle();
+
+            for(int i = 0; i < 6; i++)
+            {
+                if(i != (int)usedSide)
+                {
+                    circularDriveObjectsArray[i].SetActive(false);
+                }
+            }
+        }
+        else if(circularDrives.left.IsGrabbed() && (isGrabbedAny == false))
+        {
+            isGrabbedAny = true;
+            usedSide = UsedSide.Left;
+            prevAngle = circularDrives.left.GetOutAngle();
+
+            for(int i = 0; i < 6; i++)
+            {
+                if(i != (int)usedSide)
+                {
+                    circularDriveObjectsArray[i].SetActive(false);
+                }
+            }
+        }
+
+
+        switch(usedSide)
+        {
+            case UsedSide.Up:
+            {
+                if((circularDrives.up.IsGrabbed() == false) && (snapRotation == false))
+                {
+                    circularDriveObjectsArray[(int)UsedSide.Up].SetActive(false);
+
+                    snapRotation = true;
+                    
+                    angle = cubes.U.localEulerAngles.y;
+
+                    if(angle < 0.0f)
+                    {
+                       angle += 360.0f; 
+                    }
+
+                    snapRotationOffset = angle % 90.0f;
+                    snapAngle = (float)Math.Round(angle - snapRotationOffset);
+
+                    if(snapRotationOffset < 45.0f)
+                    {
+                        snapDirection = -1.0f;
+                    }
+                    else
+                    {
+                        snapDirection = 1.0f;
+                    }
+
+                    if(snapAngle > 180.0f)
+                    {
+                        snapAngle -= 360.0f;
+                    }
+
+                    break;
+                }
+                else if(snapRotation == true)
+                {
+                    for(int yID = 0; yID < 3; yID++)
+                    {
+                        for(int zID = 0; zID < 3; zID++)
+                        {
+                            cubeArray[2, yID, zID].RotateAround(cubes.middle.position, cubes.middle.up, Time.deltaTime * snapSpeed * snapDirection);
+
+                            snapRotationOffset -= Time.deltaTime * snapSpeed * snapDirection;
+
+                            if(snapRotationOffset <= 0.0f)
+                            {
+                                
+                            }
+                        }
+                    } 
+
+
+                    for(int i = 0; i < 6; i++)
+                    {
+                        if(i != (int)usedSide)
+                        {
+                            circularDriveObjectsArray[i].SetActive(true);
+                        }
+                    }
+
+                    isGrabbedAny = false;
+                    usedSide = UsedSide.None;
+                }
+
+                float currentAngle = circularDrives.up.GetOutAngle();
+                float diffAngle = currentAngle - prevAngle;
+
+                for(int yID = 0; yID < 3; yID++)
+                {
+                    for(int zID = 0; zID < 3; zID++)
+                    {
+                        cubeArray[2, yID, zID].RotateAround(cubes.middle.position, cubes.middle.up, diffAngle);
+                    }
+                }
+
+                prevAngle = currentAngle;
+            }
+            break;
+
+            case UsedSide.Down:
+            {
+                if(circularDrives.down.IsGrabbed() == false)
+                {
+                    for(int i = 0; i < 6; i++)
+                    {
+                        if(i != (int)usedSide)
+                        {
+                            circularDriveObjectsArray[i].SetActive(true);
+                        }
+                    }
+
+                    isGrabbedAny = false;
+                    usedSide = UsedSide.None;
+                    break;
+                }
+
+                float currentAngle = circularDrives.down.GetOutAngle();
+                float diffAngle = currentAngle - prevAngle;
+
+                for(int yID = 0; yID < 3; yID++)
+                {
+                    for(int zID = 0; zID < 3; zID++)
+                    {
+                        cubeArray[0, yID, zID].RotateAround(cubes.middle.position, -cubes.middle.up, diffAngle);
+                    }
+                }
+
+                prevAngle = currentAngle;
+            }
+            break;
+
+            case UsedSide.Front:
+            {
+                if(circularDrives.front.IsGrabbed() == false)
+                {
+                    for(int i = 0; i < 6; i++)
+                    {
+                        if(i != (int)usedSide)
+                        {
+                            circularDriveObjectsArray[i].SetActive(true);
+                        }
+                    }
+
+                    isGrabbedAny = false;
+                    usedSide = UsedSide.None;
+                    break;
+                }
+
+                float currentAngle = circularDrives.front.GetOutAngle();
+                float diffAngle = currentAngle - prevAngle;
+
+                for(int xID = 0; xID < 3; xID++)
+                {
+                    for(int yID = 0; yID < 3; yID++)
+                    {
+                        cubeArray[xID, yID, 0].RotateAround(cubes.middle.position, cubes.middle.forward, diffAngle);
+                    }
+                }
+
+                prevAngle = currentAngle;
+            }
+            break;
+
+            case UsedSide.Back:
+            {
+                if(circularDrives.back.IsGrabbed() == false)
+                {
+                    for(int i = 0; i < 6; i++)
+                    {
+                        if(i != (int)usedSide)
+                        {
+                            circularDriveObjectsArray[i].SetActive(true);
+                        }
+                    }
+
+                    isGrabbedAny = false;
+                    usedSide = UsedSide.None;
+                    break;
+                }
+
+                float currentAngle = circularDrives.back.GetOutAngle();
+                float diffAngle = currentAngle - prevAngle;
+
+                for(int xID = 0; xID < 3; xID++)
+                {
+                    for(int yID = 0; yID < 3; yID++)
+                    {
+                        cubeArray[xID, yID, 2].RotateAround(cubes.middle.position, -cubes.middle.forward, diffAngle);
+                    }
+                }
+
+                prevAngle = currentAngle;
+            }
+            break;
+
+            case UsedSide.Right:
+            {
+                if(circularDrives.right.IsGrabbed() == false)
+                {
+                    for(int i = 0; i < 6; i++)
+                    {
+                        if(i != (int)usedSide)
+                        {
+                            circularDriveObjectsArray[i].SetActive(true);
+                        }
+                    }
+
+                    isGrabbedAny = false;
+                    usedSide = UsedSide.None;
+                    break;
+                }
+
+                float currentAngle = circularDrives.right.GetOutAngle();
+                float diffAngle = currentAngle - prevAngle;
+
+                for(int xID = 0; xID < 3; xID++)
+                {
+                    for(int zID = 0; zID < 3; zID++)
+                    {
+                        cubeArray[xID, 2, zID].RotateAround(cubes.middle.position, cubes.middle.right, diffAngle);
+                    }
+                }
+
+                prevAngle = currentAngle;
+            }
+            break;
+
+            case UsedSide.Left:
+            {
+                if(circularDrives.left.IsGrabbed() == false)
+                {
+                        
+                    for(int i = 0; i < 6; i++)
+                    {
+                        if(i != (int)usedSide)
+                        {
+                            circularDriveObjectsArray[i].SetActive(true);
+                        }
+                    }
+
+                    isGrabbedAny = false;
+                    usedSide = UsedSide.None;
+                    break;
+                }
+
+                float currentAngle = circularDrives.left.GetOutAngle();
+                float diffAngle = currentAngle - prevAngle;
+
+                for(int xID = 0; xID < 3; xID++)
+                {
+                    for(int zID = 0; zID < 3; zID++)
+                    {
+                        cubeArray[xID, 0, zID].RotateAround(cubes.middle.position, -cubes.middle.right, diffAngle);
+                    }
+                }
+
+                prevAngle = currentAngle;
+            }
+            break;
+        }
+    }
+}
